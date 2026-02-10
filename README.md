@@ -2,6 +2,8 @@
 
 An intelligent PDF Question Answering system that uses **LLM-based semantic routing** instead of traditional vector similarity search for precise document navigation.
 
+Scope: Current POC is single-PDF and does not use a vector DB.
+
 ## 🎯 Key Innovation
 
 **Current POC (What's Built):**
@@ -110,7 +112,10 @@ python pdfqa.py config
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Future Scaling Architecture (1000+ PDFs)
+## 🚀 Future Extension: Hybrid Retrieval (Not Implemented)
+
+Future extension (not implemented in this POC): vector-DB-based document discovery
+for multi-PDF scale.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
