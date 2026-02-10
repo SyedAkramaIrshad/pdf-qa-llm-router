@@ -75,23 +75,36 @@ def get_section_summary_prompt(
     """
     return f"""You are analyzing a {chunk_size}-page section (pages {page_start}-{page_end}) from a PDF.
 
-CONTEXT: This is section {section_id} of {total_sections}.
+CONTEXT: This is section {section_id} of {total_sections}. Pages are numbered {page_start} to {page_end}.
 
 CONTENT:
 {content}
 
 Please provide a structured analysis:
 
-1. **SUMMARY**: 3-5 bullet points covering the main topics discussed in this section
-2. **KEYWORDS**: 5-10 important terms, concepts, formulas, or entities mentioned
-3. **INSIGHTS**: Any notable data points, conclusions, formulas, or unique observations
+1. **PAGE_BREAKDOWN**: For each page or page range, briefly describe what content it covers.
+   Format: {page_start}: "description", {page_start+1}: "description", etc.
+   OR group consecutive pages with similar content: "{page_start}-{page_end}: description"
+
+2. **SUMMARY**: 3-5 bullet points covering the main topics discussed in this section
+
+3. **KEYWORDS**: 5-10 important terms, concepts, formulas, or entities mentioned
+
+4. **INSIGHTS**: Any notable data points, conclusions, formulas, or unique observations
 
 Respond in JSON format:
 {{
+    "page_breakdown": [
+        {{"pages": "1-2", "topic": "introduction and overview"}},
+        {{"pages": "3", "topic": "methodology"}},
+        {{"pages": "4-5", "topic": "results and analysis"}}
+    ],
     "summary": ["bullet 1", "bullet 2", ...],
     "keywords": ["keyword1", "keyword2", ...],
     "insights": ["insight1", "insight2", ...]
-}}"""
+}}
+
+IMPORTANT: The page_breakdown should help identify exactly which pages contain specific information."""
 
 
 def get_router_prompt(
@@ -115,18 +128,23 @@ def get_router_prompt(
 
     return f"""{metadata_context}
 
-You are a routing agent. Your job is to decide which section of the PDF contains the answer to a question.
+You are a routing agent. Your job is to decide which SPECIFIC PAGES contain the answer to a question.
 
 QUESTION: {question}
 
 {sections_formatted}
 
 INSTRUCTIONS:
-1. Analyze which section summary best matches the question
-2. Look at keywords and summary points
-3. Output your reasoning AND decision
+1. Analyze the page breakdowns to find which pages contain relevant information
+2. Look at keywords and summary points for each section
+3. Predict the SPECIFIC PAGE NUMBERS that answer the question
+4. Be precise - don't select the whole section if only 2-3 pages are relevant
 
-FORMAT: "Reasoning: [why you chose this section]. Decision: Section X (page Y)"
+FORMAT: "Reasoning: [your analysis]. Decision: Pages X, Y, Z" or "Pages X-Y"
+
+Examples:
+- "Reasoning: The question asks about architecture. Section 1 page breakdown shows pages 9-10 cover architecture. Decision: Pages 9-10"
+- "Reasoning: The question is about Tools definition. Section 2 breakdown shows page 13 covers Tools. Decision: Page 13"
 
 Your response:"""
 
@@ -235,14 +253,25 @@ def format_sections_for_router(sections: List[Dict[str, Any]]) -> str:
         page_range = section.get("page_range", [0, 0])
         summary = section.get("summary", [])
         keywords = section.get("keywords", [])
+        page_breakdown = section.get("page_breakdown", [])
 
         summary_str = "; ".join(summary) if summary else "No summary available"
         keywords_str = ", ".join(keywords) if keywords else "No keywords"
 
+        # Format page breakdown
+        breakdown_lines = []
+        for item in page_breakdown:
+            pages = item.get("pages", "unknown")
+            topic = item.get("topic", "unknown")
+            breakdown_lines.append(f"    - Pages {pages}: {topic}")
+
+        breakdown_str = "\n".join(breakdown_lines) if breakdown_lines else "    No page breakdown available"
+
         lines.append(
             f"Section {section_id} (Pages {page_range[0]}-{page_range[1]}):\n"
             f"  Summary: {summary_str}\n"
-            f"  Keywords: {keywords_str}"
+            f"  Keywords: {keywords_str}\n"
+            f"  Page Breakdown:\n{breakdown_str}"
         )
 
     return "\n\n".join(lines) if lines else "No sections available"

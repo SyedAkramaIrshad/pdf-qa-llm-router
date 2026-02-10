@@ -249,49 +249,51 @@ async def router_node(state: PDFQAState) -> PDFQAState:
 
         print(f"  → LLM Reasoning:\n{response}")
 
-        # Extract section/page number from response
+        # Extract specific page numbers from response
         import re
         chunk_size = metadata["chunk_size"]
         total_pages = metadata["total_pages"]
 
-        # Look for "Section X" or "page Y" or "Section X (page Y)"
-        section_match = re.search(r'section\s*(\d+)', response.lower())
-        page_match = re.search(r'page\s*(\d+)', response.lower())
-        range_match = re.search(r'pages?\s*(\d+)[-–\s](\d+)', response.lower())
+        predicted_pages = []
 
-        if section_match:
-            # LLM said "Section X"
-            section_id = int(section_match.group(1)) - 1  # Convert to 0-indexed
-        elif page_match and range_match:
-            # LLM said "page X-Y" - use the starting page
-            start_page = int(page_match.group(1))
-            section_id = (start_page - 1) // chunk_size
-        elif page_match:
-            # LLM said "page X"
-            start_page = int(page_match.group(1))
-            section_id = (start_page - 1) // chunk_size
-        else:
-            # Fallback - try to find any number and interpret as section
+        # Try to match "Pages 9-10" or "Pages 9, 10" or "Page 9" or "Decision: Pages X-Y"
+        range_match = re.search(r'pages?\s*(\d+)\s*[-–]\s*(\d+)', response.lower())
+        list_match = re.search(r'pages?\s*([\d,\s]+)', response.lower())
+        single_match = re.search(r'page\s*(\d+)', response.lower())
+
+        if range_match:
+            # "Pages 9-10" or "Page 9-10"
+            start = int(range_match.group(1))
+            end = int(range_match.group(2))
+            predicted_pages = list(range(start, end + 1))
+        elif list_match:
+            # "Pages 9, 10" or "9, 10"
+            page_list = list_match.group(1).replace(' ', ',')
+            predicted_pages = [int(p.strip()) for p in page_list.split(',') if p.strip().isdigit()]
+        elif single_match:
+            # "Page 9"
+            predicted_pages = [int(single_match.group(1))]
+
+        # Validate pages are in range
+        predicted_pages = [p for p in predicted_pages if 1 <= p <= total_pages]
+
+        # Fallback: try to find any reasonable page numbers
+        if not predicted_pages:
             numbers = re.findall(r'\b\d+\b', response)
-            if numbers:
-                # If number is small (1-8), it's probably a section number
-                num = int(numbers[0])
-                if num <= 8:  # Max sections
-                    section_id = num - 1
-                else:
-                    # Otherwise it's a page number
-                    section_id = (num - 1) // chunk_size
-            else:
-                section_id = 0
+            for num in numbers:
+                n = int(num)
+                if 1 <= n <= total_pages and n not in predicted_pages:
+                    predicted_pages.append(n)
 
-        section_start = section_id * chunk_size + 1
-        section_end = min((section_id + 1) * chunk_size, total_pages)
-        all_pages = list(range(section_start, section_end + 1))
+        # If still no pages, use first chunk as fallback
+        if not predicted_pages:
+            predicted_pages = list(range(1, min(chunk_size + 1, total_pages + 1)))
 
-        state["predicted_pages"] = all_pages[:20]
+        # Limit to max 20 pages to avoid too much content
+        state["predicted_pages"] = predicted_pages[:20]
         state["router_confidence"] = 0.8
 
-        print(f"  → Selected: Section {section_id + 1} (Pages {section_start}-{section_end})")
+        print(f"  → Selected: Pages {state['predicted_pages']}")
 
     except Exception as e:
         print(f"  ⚠️  Routing failed: {e}")

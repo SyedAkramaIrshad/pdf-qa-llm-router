@@ -7,9 +7,20 @@ from typing import List, Optional, Dict, Any
 class SectionSummary(BaseModel):
     """Schema for PDF section summary output."""
 
+    page_breakdown: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="List of page ranges and their topics"
+    )
     summary: List[str] = Field(description="3-5 bullet points covering main topics")
     keywords: List[str] = Field(description="5-10 important terms, concepts, or entities")
     insights: List[str] = Field(description="Notable data points, conclusions, or observations")
+
+    @field_validator("page_breakdown")
+    @classmethod
+    def page_breakdown_not_empty(cls, v):
+        if not v or len(v) == 0:
+            return [{"pages": "unknown", "topic": "No breakdown available"}]
+        return v
 
     @field_validator("summary")
     @classmethod
