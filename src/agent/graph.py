@@ -1,6 +1,7 @@
 """LangGraph implementation for PDF QA system."""
 
 import asyncio
+import json
 from typing import List, Dict, Any, Optional, TypedDict, Literal
 from pathlib import Path
 
@@ -12,6 +13,11 @@ from ..llm import get_router_prompt, get_error_correction_prompt, get_answer_gen
 from ..llm import format_sections_for_router, get_section_breakdown
 from ..pdf import PDFProcessor
 from ..config.settings import get_settings
+
+
+# CACHE DIRECTORY
+CACHE_DIR = Path(__file__).parent.parent.parent / "data" / "summaries"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # STATE DEFINITIONS
@@ -544,12 +550,54 @@ class PDFQAAgent:
         # Indexed data
         self._section_summaries: Optional[List[Dict[str, Any]]] = None
 
-    async def index_pdf(self) -> List[Dict[str, Any]]:
+    def _get_cache_path(self) -> Path:
+        """Get the cache file path for this PDF."""
+        import hashlib
+        pdf_hash = hashlib.md5(str(self.pdf_path).encode()).hexdigest()
+        return CACHE_DIR / f"{pdf_hash}.json"
+
+    def _load_summaries_from_cache(self) -> Optional[List[Dict[str, Any]]]:
+        """Load summaries from cache if available."""
+        cache_path = self._get_cache_path()
+        if cache_path.exists():
+            try:
+                with open(cache_path, 'r') as f:
+                    data = json.load(f)
+                    # Verify the PDF hasn't changed
+                    if data.get("file_hash") == self.metadata.get("file_hash"):
+                        return data.get("summaries", [])
+            except Exception as e:
+                print(f"  Warning: Failed to load cache: {e}")
+        return None
+
+    def _save_summaries_to_cache(self, summaries: List[Dict[str, Any]]) -> None:
+        """Save summaries to cache."""
+        cache_path = self._get_cache_path()
+        try:
+            with open(cache_path, 'w') as f:
+                json.dump({
+                    "file_hash": self.metadata.get("file_hash"),
+                    "pdf_path": self.pdf_path,
+                    "summaries": summaries,
+                    "total_sections": len(summaries),
+                }, f, indent=2)
+        except Exception as e:
+            print(f"  Warning: Failed to save cache: {e}")
+
+    async def index_pdf(self, force: bool = False) -> List[Dict[str, Any]]:
         """Index PDF by summarizing all sections.
 
         Returns:
             List of section summaries
         """
+        # Try to load from cache first
+        if not force:
+            cached = self._load_summaries_from_cache()
+            if cached:
+                print(f"\nUsing cached summaries ({len(cached)} sections)")
+                self._section_summaries = cached
+                return cached
+
         print(f"\n{'='*60}")
         print(f"INDEXING PDF: {Path(self.pdf_path).name}")
         print(f"{'='*60}")
@@ -565,7 +613,10 @@ class PDFQAAgent:
 
         self._section_summaries = result["section_summaries"]
 
-        print(f"\n✅ Indexing complete!")
+        # Save to cache
+        self._save_summaries_to_cache(self._section_summaries)
+
+        print(f"\nIndexing complete!")
         print(f"   Total Sections: {len(self._section_summaries)}")
 
         return self._section_summaries

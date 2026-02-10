@@ -34,22 +34,28 @@ def cli():
 @click.argument("pdf_path", type=click.Path(exists=True))
 @click.option("--question", "-q", help="Question to ask about the PDF")
 @click.option("--interactive", "-i", is_flag=True, help="Interactive Q&A mode")
-def ask(pdf_path: str, question: Optional[str], interactive: bool):
+@click.option("--reindex", is_flag=True, help="Force re-indexing the PDF")
+def ask(pdf_path: str, question: Optional[str], interactive: bool, reindex: bool):
     """Ask a question about a PDF.
 
     Example:
-        pdf-ask document.pdf "What is the main conclusion?"
+        pdfqa.py ask document.pdf -q "What is the main conclusion?"
     """
     async def run():
         agent = get_agent(pdf_path)
 
-        # Index the PDF
-        click.echo(f"\nIndexing {Path(pdf_path).name}...")
-        with click.progressbar(length=100, label="Progress") as bar:
-            await agent.index_pdf()
-            bar.update(100)
+        # Index the PDF (will use cache if available)
+        if reindex:
+            click.echo(f"\nRe-indexing {Path(pdf_path).name}...")
+        else:
+            click.echo(f"\nLoading {Path(pdf_path).name}...")
 
-        click.echo("Indexing complete!")
+        await agent.index_pdf(force=reindex)
+
+        if reindex:
+            click.echo("Indexing complete!")
+        else:
+            click.echo("Ready!")
 
         if interactive:
             # Interactive mode
@@ -98,20 +104,27 @@ def ask(pdf_path: str, question: Optional[str], interactive: bool):
 @cli.command()
 @click.argument("pdf_path", type=click.Path(exists=True))
 @click.option("--output", "-o", type=click.Path(), help="Output JSON file")
-def index(pdf_path: str, output: Optional[str]):
+@click.option("--reindex", is_flag=True, help="Force re-indexing even if cache exists")
+def index(pdf_path: str, output: Optional[str], reindex: bool):
     """Index a PDF for faster Q&A.
 
     This processes the PDF and generates section summaries.
-    Use this before asking multiple questions.
+    Cache is automatically used for subsequent runs unless --reindex is passed.
     """
     async def run():
         agent = get_agent(pdf_path)
 
-        click.echo(f"\nIndexing {Path(pdf_path).name}...")
+        if reindex:
+            click.echo(f"\nRe-indexing {Path(pdf_path).name}...")
+        else:
+            click.echo(f"\nIndexing {Path(pdf_path).name}...")
 
-        summaries = await agent.index_pdf()
+        summaries = await agent.index_pdf(force=reindex)
 
-        click.echo(f"Indexed {len(summaries)} sections!")
+        if reindex:
+            click.echo(f"Indexed {len(summaries)} sections!")
+        else:
+            click.echo(f"Loaded {len(summaries)} sections from cache!")
 
         for s in summaries:
             click.echo(f"\n  Section {s['section_id']} (Pages {s['page_range'][0]}-{s['page_range'][1]}):")

@@ -41,9 +41,11 @@ Thumbs.db
 
 # Project specific
 data/indices/*.json
+data/summaries/*.json
 data/extracted/*
 data/pdfs/*.pdf
 !data/indices/.gitkeep
+!data/summaries/.gitkeep
 !data/extracted/.gitkeep
 !data/pdfs/.gitkeep
 
