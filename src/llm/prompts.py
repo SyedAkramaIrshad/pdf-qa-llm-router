@@ -24,32 +24,30 @@ def get_metadata_context(metadata: Dict[str, Any]) -> str:
 
     # Build section mapping
     section_lines = []
-    for i in range(min(total_sections, 10)):  # Show first 10 sections
+    for i in range(min(total_sections, 10)):
         start_page = i * chunk_size + 1
         end_page = min((i + 1) * chunk_size, total_pages)
-        if i == total_sections - 1:  # Last section
+        if i == total_sections - 1:
             end_page = total_pages
-        section_lines.append(f"║  Section {i + 1}:  Pages {start_page}-{end_page}")
+        section_lines.append(f"  Section {i + 1}: Pages {start_page}-{end_page}")
 
     if total_sections > 10:
-        section_lines.append("║  ...")
+        section_lines.append("  ...")
 
-    section_mapping = "\n".join(section_lines) if section_lines else "║  (No sections)"
+    section_mapping = "\n".join(section_lines) if section_lines else "  (No sections)"
 
     return f"""
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                              PDF METADATA                                      ║
-╠═══════════════════════════════════════════════════════════════════════════════╣
-║  Total Pages:        {total_pages}
-║  Total Sections:     {total_sections}
-║  Pages Per Section:  {chunk_size}
-║  Valid Page Range:   1 to {total_pages}
-╠═══════════════════════════════════════════════════════════════════════════════╣
-║  SECTION MAPPING:                                                            ║
-{section_mapping}
-╚═══════════════════════════════════════════════════════════════════════════════╝
+PDF METADATA
+------------
+Total Pages: {total_pages}
+Total Sections: {total_sections}
+Pages Per Section: {chunk_size}
+Valid Page Range: 1 to {total_pages}
 
-⚠️  IMPORTANT: Always predict page numbers within the valid range (1 to {total_pages})
+SECTION MAPPING:
+{section_mapping}
+
+IMPORTANT: Always predict page numbers within the valid range (1 to {total_pages})
 """
 
 

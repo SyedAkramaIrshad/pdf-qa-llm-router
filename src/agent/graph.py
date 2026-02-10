@@ -1,19 +1,10 @@
-"""LangGraph implementation for PDF QA system.
-
-This module implements the agentic workflow:
-1. Section Summarizer - Summarize PDF chunks in parallel
-2. Router - Predict relevant page numbers
-3. Page Fetcher Tool - Extract page text + images
-4. Answer Generator - Generate final answer with vision
-5. Error Correction - Feed errors back to Router
-"""
+"""LangGraph implementation for PDF QA system."""
 
 import asyncio
-from typing import List, Dict, Any, Optional, TypedDict, Annotated, Literal
+from typing import List, Dict, Any, Optional, TypedDict, Literal
 from pathlib import Path
 
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 from PIL import Image
 
 from ..llm import GLMClient, get_metadata_context, get_section_summary_prompt
@@ -23,9 +14,7 @@ from ..pdf import PDFProcessor
 from ..config.settings import get_settings
 
 
-# ============================================================================
 # STATE DEFINITIONS
-# ============================================================================
 
 class PDFQAState(TypedDict):
     """State for the PDF QA workflow."""
@@ -67,9 +56,7 @@ class IndexingState(TypedDict):
     current_section: int
 
 
-# ============================================================================
 # PAGE FETCHER TOOL
-# ============================================================================
 
 class PageFetcherTool:
     """Tool for fetching page content from PDF."""
@@ -145,9 +132,7 @@ class PageFetcherTool:
 _page_fetcher = PageFetcherTool()
 
 
-# ============================================================================
 # AGENT NODES
-# ============================================================================
 
 async def summarize_sections_node(state: IndexingState) -> IndexingState:
     """Summarize all PDF sections in parallel."""
@@ -163,7 +148,7 @@ async def summarize_sections_node(state: IndexingState) -> IndexingState:
     total_sections = metadata["total_sections"]
     summaries = []
 
-    print(f"\n📚 Summarizing {total_sections} sections...")
+    print(f"\nSummarizing {total_sections} sections...")
 
     # Create tasks for parallel processing
     async def summarize_section(section_id: int) -> Dict[str, Any]:
@@ -246,7 +231,7 @@ async def router_node(state: PDFQAState) -> PDFQAState:
     # Get router prompt with metadata
     prompt = get_router_prompt(question, sections_formatted, metadata)
 
-    print(f"\n🔍 Routing question to relevant sections...")
+    print(f"\nRouting question to relevant sections...")
 
     try:
         # Ask LLM for reasoning + decision
@@ -317,7 +302,7 @@ async def fetcher_node(state: PDFQAState) -> PDFQAState:
     predicted_pages = state["predicted_pages"]
     metadata = state["metadata"]
 
-    print(f"\n📄 Fetching pages {predicted_pages}...")
+    print(f"\nFetching pages {predicted_pages}...")
 
     result = _page_fetcher.fetch_pages(pdf_path, predicted_pages, metadata)
 
@@ -346,7 +331,7 @@ async def answer_generator_node(state: PDFQAState) -> PDFQAState:
 
     llm = GLMClient()
 
-    print(f"\n💡 Generating answer...")
+    print(f"\nGenerating answer...")
 
     # Combine all page texts
     combined_text = "\n\n---\n\n".join([
@@ -418,7 +403,7 @@ async def error_correction_node(state: PDFQAState) -> PDFQAState:
         # No error or max retries reached
         return state
 
-    print(f"\n🔧 Attempting error correction (attempt {retry_count + 1})...")
+    print(f"\nAttempting error correction (attempt {retry_count + 1})...")
 
     llm = GLMClient()
 
@@ -454,9 +439,7 @@ async def error_correction_node(state: PDFQAState) -> PDFQAState:
     return state
 
 
-# ============================================================================
 # HELPER FUNCTIONS
-# ============================================================================
 
 def parse_page_list(text: str) -> List[int]:
     """Extract page numbers from LLM response.
@@ -483,9 +466,7 @@ def parse_page_list(text: str) -> List[int]:
     return []
 
 
-# ============================================================================
 # GRAPH BUILDERS
-# ============================================================================
 
 def create_qa_graph() -> StateGraph:
     """Create the QA workflow graph."""
@@ -543,9 +524,7 @@ def create_indexing_graph() -> StateGraph:
     return graph.compile()
 
 
-# ============================================================================
 # MAIN INTERFACE
-# ============================================================================
 
 class PDFQAAgent:
     """Main agent for PDF QA system."""

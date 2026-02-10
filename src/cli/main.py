@@ -44,12 +44,12 @@ def ask(pdf_path: str, question: Optional[str], interactive: bool):
         agent = get_agent(pdf_path)
 
         # Index the PDF
-        click.echo(click.style(f"\n📚 Indexing {Path(pdf_path).name}...", fg="blue"))
+        click.echo(f"\nIndexing {Path(pdf_path).name}...")
         with click.progressbar(length=100, label="Progress") as bar:
             await agent.index_pdf()
             bar.update(100)
 
-        click.echo(click.style("✅ Indexing complete!", fg="green"))
+        click.echo("Indexing complete!")
 
         if interactive:
             # Interactive mode
@@ -69,10 +69,10 @@ def ask(pdf_path: str, question: Optional[str], interactive: bool):
                     result = await agent.ask(q)
 
                     click.echo("\n" + "="*60)
-                    click.echo(click.style("ANSWER:", fg="green", bold=True))
+                    click.echo("ANSWER:")
                     click.echo("="*60)
                     click.echo(result["answer"])
-                    click.echo(f"\n📖 Sources: Page {result['sources']}")
+                    click.echo(f"\nSources: Page {result['sources']}")
 
                 except (EOFError, KeyboardInterrupt):
                     click.echo("\nGoodbye!")
@@ -83,11 +83,11 @@ def ask(pdf_path: str, question: Optional[str], interactive: bool):
             result = await agent.ask(question)
 
             click.echo("\n" + "="*60)
-            click.echo(click.style("ANSWER:", fg="green", bold=True))
+            click.echo("ANSWER:")
             click.echo("="*60)
             click.echo(result["answer"])
-            click.echo(f"\n📖 Sources: Page {result['sources']}")
-            click.echo(f"🔍 Predicted: {result['predicted_pages']}")
+            click.echo(f"\nSources: Page {result['sources']}")
+            click.echo(f"Predicted: {result['predicted_pages']}")
 
         else:
             click.echo("Please provide a question with --question or use --interactive mode")
@@ -107,11 +107,11 @@ def index(pdf_path: str, output: Optional[str]):
     async def run():
         agent = get_agent(pdf_path)
 
-        click.echo(click.style(f"\n📚 Indexing {Path(pdf_path).name}...", fg="blue"))
+        click.echo(f"\nIndexing {Path(pdf_path).name}...")
 
         summaries = await agent.index_pdf()
 
-        click.echo(click.style(f"✅ Indexed {len(summaries)} sections!", fg="green"))
+        click.echo(f"Indexed {len(summaries)} sections!")
 
         for s in summaries:
             click.echo(f"\n  Section {s['section_id']} (Pages {s['page_range'][0]}-{s['page_range'][1]}):")
@@ -130,16 +130,16 @@ def config():
     click.echo("PDF QA SYSTEM CONFIGURATION")
     click.echo("="*60)
 
-    click.echo(f"\n🔑 API Key: {settings.glm_api_key[:20]}...{settings.glm_api_key[-10:]}")
-    click.echo(f"🌐 Base URL: {settings.glm_base_url}")
-    click.echo(f"🤖 Text Model: {settings.glm_model}")
-    click.echo(f"👁️  Vision Model: {settings.glm_vision_model}")
-    click.echo(f"\n📊 Processing:")
+    click.echo(f"\nAPI Key: {settings.glm_api_key[:20]}...{settings.glm_api_key[-10:]}")
+    click.echo(f"Base URL: {settings.glm_base_url}")
+    click.echo(f"Text Model: {settings.glm_model}")
+    click.echo(f"Vision Model: {settings.glm_vision_model}")
+    click.echo(f"\nProcessing:")
     click.echo(f"   Chunk Size: {settings.chunk_size} pages")
     click.echo(f"   Max Concurrent Calls: {settings.max_concurrent_calls}")
     click.echo(f"   Max Retries: {settings.max_retry_attempts}")
 
-    click.echo(f"\n📁 Directories:")
+    click.echo(f"\nDirectories:")
     click.echo(f"   Project Root: {settings.project_root}")
     click.echo(f"   PDFs: {settings.pdfs_dir}")
     click.echo(f"   Extracted: {settings.extracted_dir}")
