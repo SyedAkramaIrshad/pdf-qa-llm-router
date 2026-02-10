@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     indexing_concurrent: int = Field(default=1, alias="INDEXING_CONCURRENT")
     # Delay between API calls in seconds (helps avoid rate limits)
     api_delay: float = Field(default=1.0, alias="API_DELAY")
+    # Router Configuration
+    # Max number of sections to include in router prompt (0 = all sections)
+    router_max_sections: int = Field(default=0, alias="ROUTER_MAX_SECTIONS")
 
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
@@ -73,6 +76,14 @@ class Settings(BaseSettings):
         """Validate that numeric settings are positive."""
         if v <= 0:
             raise ValueError("Value must be positive")
+        return v
+
+    @field_validator("router_max_sections")
+    @classmethod
+    def validate_non_negative_int(cls, v: int) -> int:
+        """Validate that router_max_sections is non-negative (0 = all)."""
+        if v < 0:
+            raise ValueError("Value must be non-negative")
         return v
 
     class Config:

@@ -230,9 +230,15 @@ async def router_node(state: PDFQAState) -> PDFQAState:
 
     llm = GLMClient()
 
-    # Format sections for router (only first 3 sections to keep prompt short)
-    sections_truncated = sections[:3]
-    sections_formatted = format_sections_for_router(sections_truncated)
+    # Format sections for router (configurable cap to control prompt size)
+    settings = get_settings()
+    max_sections = settings.router_max_sections
+    if max_sections and max_sections > 0:
+        sections_for_router = sections[:max_sections]
+    else:
+        sections_for_router = sections
+
+    sections_formatted = format_sections_for_router(sections_for_router)
 
     # Get router prompt with metadata
     prompt = get_router_prompt(question, sections_formatted, metadata)

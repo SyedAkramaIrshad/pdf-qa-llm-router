@@ -151,6 +151,7 @@ def config():
     click.echo(f"   Chunk Size: {settings.chunk_size} pages")
     click.echo(f"   Max Concurrent Calls: {settings.max_concurrent_calls}")
     click.echo(f"   Max Retries: {settings.max_retry_attempts}")
+    click.echo(f"   Router Max Sections: {settings.router_max_sections} (0 = all)")
 
     click.echo(f"\nDirectories:")
     click.echo(f"   Project Root: {settings.project_root}")

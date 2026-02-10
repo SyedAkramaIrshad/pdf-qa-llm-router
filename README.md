@@ -50,6 +50,16 @@ Pillow>=11.0.0
 click>=8.0.0
 ```
 
+System dependency: `pdf2image` requires Poppler to be installed.
+
+```bash
+# macOS
+brew install poppler
+
+# Ubuntu/Debian
+sudo apt-get install poppler-utils
+```
+
 ## ⚙️ Configuration
 
 ```bash
@@ -63,6 +73,7 @@ CHUNK_SIZE=10              # Pages per section
 INDEXING_CONCURRENT=1      # 1=sequential, >1=parallel
 API_DELAY=1.0              # Delay between API calls
 MAX_CONCURRENT_CALLS=3     # Max parallel LLM calls
+ROUTER_MAX_SECTIONS=0      # 0 = all sections, >0 caps router prompt size
 ```
 
 ## 📖 Usage
