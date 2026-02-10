@@ -168,51 +168,24 @@ python pdfqa.py config
 └── .env.example       # Configuration template
 ```
 
-## 🔮 Future Roadmap
+## 🚀 Extending to Scale
 
-### Phase 1: Current (POC) ✅
-- ✅ Single PDF Q&A
-- ✅ LLM-based routing with reasoning
-- ✅ 10-page section chunking
-- ✅ JSON summaries with keywords and insights
-- ✅ Vision support (image analysis)
-- ✅ Error correction (self-correcting page predictions)
-- ✅ CLI interface
-- ✅ Sequential processing (configurable parallelism)
+This concept can be extended to handle 1000+ PDFs using a hybrid approach:
 
-### Phase 2: Multi-Document Support 🚧
-- [ ] Vector DB integration (ChunkDB, Weaviate, or pgvector)
-- [ ] Persistent JSON summary storage (file/DB)
-- [ ] Document discovery pipeline (chunk → embed → store with metadata)
-- [ ] Multi-PDF LLM routing (parallel routing across N PDFs)
-- [ ] Filename/title/tag metadata indexing
-- [ ] **Cost scaling**: O(N) where N = unique files in search results
+**Document Discovery (Vector DB):**
+- Embed all PDF chunks into a vector database
+- Query returns top relevant chunks with filename metadata
+- Aggregate by filename to identify Top N most relevant PDFs
 
-**How Phase 2 Works:**
-```
-User Query → Vector Search → Top 50 chunks
-           ↓
-           Aggregate by filename → Top 5 unique PDFs
-           ↓
-           Load 5 JSON summaries → 5 parallel LLM calls
-           ↓
-           Predict pages per PDF → Fetch and answer
-```
+**Precise Navigation (LLM Routing):**
+- Load pre-computed JSON summaries for the Top N PDFs
+- Run parallel LLM routing (one call per PDF) to predict pages
+- Fetch pages and generate answer with citations
 
-### Phase 3: Production
-- [ ] FastAPI web interface
-- [ ] Caching layer (embeddings, summaries)
-- [ ] Batch processing pipeline
-- [ ] Usage analytics
-- [ ] Rate limiting
-- [ ] Multi-user support
-
-### Phase 4: Advanced Features
-- [ ] Multi-document queries (compare 2+ PDFs)
-- [] Conversation memory
-- [] File upload API
-- [ ] Export to markdown/PDF
-- [ ] Citation export
+**Why Hybrid?**
+- Vector DB excels at finding relevant documents at scale
+- LLM routing provides semantic understanding within documents
+- Cost scales with O(N) where N = unique files in results, not total documents
 
 ## 🔐 Security & Privacy
 
@@ -232,7 +205,3 @@ Contributions welcome! Please feel free to submit a Pull Request.
 ## 📧 Contact
 
 For issues and questions, please open an issue on GitHub.
-
----
-
-**Built with ❤️ using GLM-4.5/4.6V Flash (Free models)**
