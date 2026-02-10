@@ -408,7 +408,7 @@ class GLMClient:
         max_tokens: int = 2000,
         system_prompt: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Generate structured JSON output.
+        """Generate structured JSON output with improved error handling.
 
         Args:
             prompt: User prompt (should request JSON output)
@@ -420,35 +420,30 @@ class GLMClient:
         Returns:
             Parsed JSON dictionary
         """
+        from .schemas import safe_parse_json
+
         # Add JSON format instruction if not present
         if "json" not in prompt.lower():
-            prompt = f"{prompt}\n\nRespond in JSON format."
+            prompt = f"{prompt}\n\nRespond ONLY with valid JSON. No markdown, no explanation."
 
-        response_text = self.generate_text(
-            prompt=prompt,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            system_prompt=system_prompt or "You always respond with valid JSON.",
-        )
-
-        # Try to parse JSON from response
         try:
-            return json.loads(response_text)
-        except json.JSONDecodeError:
-            # Try to extract JSON from markdown code blocks
-            if "```json" in response_text:
-                json_start = response_text.find("```json") + 7
-                json_end = response_text.find("```", json_start)
-                json_str = response_text[json_start:json_end].strip()
-                return json.loads(json_str)
-            elif "```" in response_text:
-                json_start = response_text.find("```") + 3
-                json_end = response_text.find("```", json_start)
-                json_str = response_text[json_start:json_end].strip()
-                return json.loads(json_str)
-            else:
-                raise ValueError(f"Failed to parse JSON from response: {response_text}")
+            response_text = self.generate_text(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt or "You always respond with valid JSON only.",
+            )
+
+            return safe_parse_json(response_text)
+
+        except Exception as e:
+            print(f"  Error generating JSON: {e}")
+            return {
+                "summary": [f"Error: {str(e)}"],
+                "keywords": [],
+                "insights": []
+            }
 
     async def generate_json_async(
         self,
@@ -457,8 +452,9 @@ class GLMClient:
         temperature: float = 0.3,
         max_tokens: int = 2000,
         system_prompt: Optional[str] = None,
+        retries: int = 2,
     ) -> Dict[str, Any]:
-        """Async version of generate_json.
+        """Async version of generate_json with improved error handling.
 
         Args:
             prompt: User prompt (should request JSON output)
@@ -466,39 +462,50 @@ class GLMClient:
             temperature: Sampling temperature (lower for more deterministic)
             max_tokens: Maximum tokens to generate
             system_prompt: Optional system prompt
+            retries: Number of retries on parse failure
 
         Returns:
             Parsed JSON dictionary
         """
+        from .schemas import safe_parse_json
+
         # Add JSON format instruction if not present
         if "json" not in prompt.lower():
-            prompt = f"{prompt}\n\nRespond in JSON format."
+            prompt = f"{prompt}\n\nRespond ONLY with valid JSON. No markdown, no explanation."
 
-        response_text = await self.generate_text_async(
-            prompt=prompt,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            system_prompt=system_prompt or "You always respond with valid JSON.",
-        )
+        for attempt in range(retries + 1):
+            try:
+                response_text = await self.generate_text_async(
+                    prompt=prompt,
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    system_prompt=system_prompt or "You always respond with valid JSON only.",
+                )
 
-        # Try to parse JSON from response
-        try:
-            return json.loads(response_text)
-        except json.JSONDecodeError:
-            # Try to extract JSON from markdown code blocks
-            if "```json" in response_text:
-                json_start = response_text.find("```json") + 7
-                json_end = response_text.find("```", json_start)
-                json_str = response_text[json_start:json_end].strip()
-                return json.loads(json_str)
-            elif "```" in response_text:
-                json_start = response_text.find("```") + 3
-                json_end = response_text.find("```", json_start)
-                json_str = response_text[json_start:json_end].strip()
-                return json.loads(json_str)
-            else:
-                raise ValueError(f"Failed to parse JSON from response: {response_text}")
+                result = safe_parse_json(response_text)
+
+                # Check if we got a valid response (not just error fallback)
+                if "Failed to parse" in result.get("summary", [""])[0]:
+                    if attempt < retries:
+                        print(f"  Retrying JSON parse (attempt {attempt + 2}/{retries + 1})...")
+                        continue
+
+                return result
+
+            except Exception as e:
+                if attempt < retries:
+                    print(f"  Error generating JSON: {e}. Retrying...")
+                    await asyncio.sleep(1)
+                else:
+                    print(f"  Failed after {retries + 1} attempts: {e}")
+                    return {
+                        "summary": [f"Error: {str(e)}"],
+                        "keywords": [],
+                        "insights": []
+                    }
+
+        return {"summary": ["Unknown error"], "keywords": [], "insights": []}
 
 
 # Convenience function to get a client instance
