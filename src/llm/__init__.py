@@ -1,0 +1,24 @@
+"""LLM module for GLM-4.7 API interactions."""
+
+from .client import GLMClient, get_client
+from .prompts import (
+    get_metadata_context,
+    get_section_summary_prompt,
+    get_router_prompt,
+    get_error_correction_prompt,
+    get_answer_generation_prompt,
+    format_sections_for_router,
+    get_section_breakdown,
+)
+
+__all__ = [
+    "GLMClient",
+    "get_client",
+    "get_metadata_context",
+    "get_section_summary_prompt",
+    "get_router_prompt",
+    "get_error_correction_prompt",
+    "get_answer_generation_prompt",
+    "format_sections_for_router",
+    "get_section_breakdown",
+]
