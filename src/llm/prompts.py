@@ -80,31 +80,19 @@ CONTEXT: This is section {section_id} of {total_sections}. Pages are numbered {p
 CONTENT:
 {content}
 
-Please provide a structured analysis:
+Provide a structured analysis in JSON format:
 
-1. **PAGE_BREAKDOWN**: For each page or page range, briefly describe what content it covers.
-   Format: {page_start}: "description", {page_start+1}: "description", etc.
-   OR group consecutive pages with similar content: "{page_start}-{page_end}: description"
-
-2. **SUMMARY**: 3-5 bullet points covering the main topics discussed in this section
-
-3. **KEYWORDS**: 5-10 important terms, concepts, formulas, or entities mentioned
-
-4. **INSIGHTS**: Any notable data points, conclusions, formulas, or unique observations
-
-Respond in JSON format:
 {{
     "page_breakdown": [
-        {{"pages": "1-2", "topic": "introduction and overview"}},
-        {{"pages": "3", "topic": "methodology"}},
-        {{"pages": "4-5", "topic": "results and analysis"}}
+        {{"pages": "{page_start}", "topic": "brief description"}},
+        {{"pages": "{page_start+1}", "topic": "brief description"}}
     ],
-    "summary": ["bullet 1", "bullet 2", ...],
-    "keywords": ["keyword1", "keyword2", ...],
-    "insights": ["insight1", "insight2", ...]
+    "summary": ["3-5 main topics"],
+    "keywords": ["5-10 important terms"],
+    "insights": ["notable observations"]
 }}
 
-IMPORTANT: The page_breakdown should help identify exactly which pages contain specific information."""
+For page_breakdown: list each page or group similar pages (e.g., "9-10"). Describe what each page covers."""
 
 
 def get_router_prompt(
